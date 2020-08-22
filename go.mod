@@ -1,4 +1,4 @@
-module nakamotonews.network/lightdash
+module nakamotonews.network/dashlight
 
 go 1.14
 
