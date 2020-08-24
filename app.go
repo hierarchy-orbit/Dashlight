@@ -24,8 +24,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 	"strconv"
+	"time"
+
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
@@ -35,8 +36,8 @@ type health struct {
 	MemoryUsed  int     `json:"sys_virt_mem_used"`
 	MemoryFree  int     `json:"sys_virt_mem_available"`
 	SystemLoad  float64 `json:"sys_loadavg_1"`
-	Version		string
-	PeerCount	string
+	Version     string
+	PeerCount   string
 }
 
 /*
@@ -56,12 +57,14 @@ var metrics = health{}
 var memGauge = widgets.NewGauge()
 var menuTest = widgets.NewParagraph()
 var textInfo = widgets.NewParagraph()
-var healthURL = "http://localhost:5052/node/health"
-var peerURL = "http://localhost:5052/network/peer_count"
-var versionURL = "http://localhost:5052/node/version"
+var baseURL = "http://localhost:5052"
+
+//var healthURL = "http://localhost:5052/node/health"
+//var peerURL = "http://localhost:5052/network/peer_count"
+//var versionURL = "http://localhost:5052/node/version"
 
 func main() {
-	
+
 	// Display the Help Message
 	getVersion()
 	menuTest.Title = metrics.Version
@@ -73,7 +76,7 @@ func main() {
 	// Text information
 	textInfo.Title = "Status Bar"
 	textInfo.Text = "Loading..."
-	textInfo.SetRect(0,5,25,10)
+	textInfo.SetRect(0, 5, 25, 10)
 
 	// Gauge to show percent memory usage
 	memGauge.Title = "Mem Usage"
@@ -87,11 +90,11 @@ func main() {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
 	defer ui.Close()
-	
+
 	showMemory()
-	
+
 	uiEvents := ui.PollEvents()
-	ticker := time.NewTicker(time.Second*5).C
+	ticker := time.NewTicker(time.Second * 5).C
 	for {
 		select {
 		case e := <-uiEvents:
@@ -103,19 +106,19 @@ func main() {
 			showMemory()
 		}
 	}
-		
+
 }
 
 func showMemory() {
 	getHealth()
 	getPeers()
-	if int(float64(metrics.MemoryUsed) / float64(metrics.MemoryTotal)*100) > 75 {
+	if int(float64(metrics.MemoryUsed)/float64(metrics.MemoryTotal)*100) > 75 {
 		memGauge.BarColor = ui.ColorRed
 	} else {
 		memGauge.BarColor = ui.ColorGreen
 	}
 
-	memGauge.Percent = int(float64(metrics.MemoryUsed) / float64(metrics.MemoryTotal)*100)
+	memGauge.Percent = int(float64(metrics.MemoryUsed) / float64(metrics.MemoryTotal) * 100)
 	textInfo.Text = "System Load: " + FloatToString(metrics.SystemLoad) + "\n" + "Peer Count: " + metrics.PeerCount
 
 	ui.Render(menuTest)
@@ -124,11 +127,11 @@ func showMemory() {
 }
 
 func getHealth() {
-	nodeHealth := http.Client {
+	nodeHealth := http.Client{
 		Timeout: time.Second * 2, // Timeout after 2 seconds
 	}
 
-	req, err := http.NewRequest(http.MethodGet, healthURL, nil)
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/node/health", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -149,7 +152,6 @@ func getHealth() {
 		log.Fatal(readErr)
 	}
 
-	
 	jsonErr := json.Unmarshal(body, &metrics)
 
 	if jsonErr != nil {
@@ -158,20 +160,32 @@ func getHealth() {
 }
 
 func getPeers() {
-	resp, _ := http.Get(peerURL)
-	bytes, _ := ioutil.ReadAll(resp.Body)
-
-	metrics.PeerCount = string(bytes)
+	res, err := http.Get(baseURL + "/network/peer_count")
+	if err != nil {
+		log.Fatal(err)
+	}
+	content, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	metrics.PeerCount = string(content)
 }
 
 func FloatToString(input_num float64) string {
-    // to convert a float number to a string
-    return strconv.FormatFloat(input_num, 'f', -1, 32)
+	// to convert a float number to a string
+	return strconv.FormatFloat(input_num, 'f', -1, 32)
 }
 
 func getVersion() {
-	resp, _ := http.Get(versionURL)
-	bytes, _ := ioutil.ReadAll(resp.Body)
-
-	metrics.Version = string(bytes)
+	res, err := http.Get(baseURL + "/node/version")
+	if err != nil {
+		log.Fatal(err)
+	}
+	content, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	metrics.Version = string(content)
 }
