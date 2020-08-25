@@ -4,7 +4,7 @@ Ethereum 2.0 Validator CLI Dashboard
 Currently this software is considered pre-alpha.
 USE AT YOUR OWN RISK!
 
-![Dashlight Screencap]/assets/dashlight-top-screenshot.png
+![Dashlight Screencap](/assets/dashlight-top-screenshot.png)
 
 ## Features
 
