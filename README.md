@@ -1,5 +1,12 @@
 # Dashlight
-Ethereum 2.0 Validator CLI Dashboard
+Ethereum 2.0 Lighthouse Validator CLI Dashboard
+
+## Description
+A dashboard for a lighthouse validator node.
+		The goal of this application is to be a light weight
+		dashboard useful on a RPi or SBC. It uses the termui
+		package and does not utilize a significant amount of
+		resources.
 
 Currently this software is considered pre-alpha.
 USE AT YOUR OWN RISK!
