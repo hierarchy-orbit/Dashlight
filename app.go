@@ -1,19 +1,23 @@
 /*
-Health Endpoint:
-{
-  "pid": 843,
-  "pid_num_threads": 37,
-  "pid_mem_resident_set_size": 3848122368,
-  "pid_mem_virtual_memory_size": 7764897792,
-  "sys_virt_mem_total": 8348585984,
-  "sys_virt_mem_available": 2940694528,
-  "sys_virt_mem_used": 5113991168,
-  "sys_virt_mem_free": 251953152,
-  "sys_virt_mem_percent": 64.77614,
-  "sys_loadavg_1": 0.34,
-  "sys_loadavg_5": 0.35,
-  "sys_loadavg_15": 0.33
-}
+	DESCRIPTION
+
+	Dashligh
+		A dashboard for a lighthouse validator node.
+		The goal of this application is to be a light weight
+		dashboard useful on a RPi or SBC. It uses the termu
+		package and does not utilize a significant amount of
+		resources.
+
+	TODO:
+		1 Add slash status
+		2 Update the balance calculation. It is currently
+			hard coded to format the box.
+		3 Add a database back end to allow persistent
+			data storage.
+			- Once persistent storage is achieved the ability
+				to graph data can be added.
+		4 Complete testing in order to move out of Alpha!
+
 */
 
 /*
@@ -27,7 +31,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"pubkeys": ["0x90f70a6bbf3
     "balance": 31204700300,
     "validator": {
       "pubkey": "0x90f70a6bbf31d38bb4e95a53ba87fc062b8858dcc45ec7c77174e891679f4e4edc2e6efb6f38aa11c7c66249c62cacdd",
-      "withdrawal_credentials": "0x006fb0366db2f083f5618a1a41f7a520ea89909c66130e0952dee81bc752499f",
+      "withdrawal_credentials": "XXXXX",
       "effective_balance": 31000000000,
       "slashed": false,
       "activation_eligibility_epoch": 631,
@@ -67,18 +71,6 @@ type health struct {
 	DBSize      string
 }
 
-/*
-statusInfo := []string{
-	"Connected Nodes: ",
-	"System Load: ",
-	"[2] interrupt.go",
-	"[3] keyboard.go",
-	"[4] output.go",
-	"[5] random_out.go",
-	"[6] dashboard.go",
-	"[7] nsf/termbox-go",
-}
-*/
 
 var metrics = health{}
 var memGauge = widgets.NewGauge()
@@ -86,10 +78,6 @@ var menuTest = widgets.NewParagraph()
 var textInfo = widgets.NewList()
 var baseURL = "http://localhost:5052"
 var DBFile = "/var/lib/lighthouse/beacon-node/beacon/chain_db"
-
-//var healthURL = "http://localhost:5052/node/health"
-//var peerURL = "http://localhost:5052/network/peer_count"
-//var versionURL = "http://localhost:5052/node/version"
 
 func main() {
 
@@ -104,13 +92,13 @@ func main() {
 	// Text information
 
 	textInfo.Rows = []string{
-		"Node Status: ",
-		"System Load: ",
-		"Peer Count : ",
-		"DB Size   : ",
+		"Node Balance: 31.214355995 ETH",
+		"System Load : ",
+		"Peer Count  : ",
+		"DB Size     : ",
 	}
 
-	textInfo.SetRect(0, 5, 25, 5+len(textInfo.Rows)+2)
+	textInfo.SetRect(0, 5, 50, 5+len(textInfo.Rows)+2)
 	textInfo.TextStyle = ui.NewStyle(ui.ColorYellow)
 
 	// Gauge to show percent memory usage
@@ -157,10 +145,10 @@ func showMemory() {
 	memGauge.Percent = int(float64(metrics.MemoryUsed) / float64(metrics.MemoryTotal) * 100)
 
 	textInfo.Rows = []string{
-		"Node Status: ",
-		"System Load: " + FloatToString(metrics.SystemLoad),
-		"Peer Count: " + metrics.PeerCount,
-		"DB Size   : " + metrics.DBSize,
+		"Node Balance: 31.214355995 ETH",
+		"System Load : " + FloatToString(metrics.SystemLoad),
+		"Peer Count  : " + metrics.PeerCount,
+		"DB Size     : " + metrics.DBSize,
 	}
 
 	// textInfo.Text = "System Load: " + FloatToString(metrics.SystemLoad) + "\n" + "Peer Count: " + metrics.PeerCount

@@ -15,7 +15,7 @@ USE AT YOUR OWN RISK!
 
 git clone https://github.com/NakamotoNetwork/Dashlight.git
 
-$ cd Dashlight
-$ go install
-$ go build
-$ ./Dashlight
+\$ cd Dashlight
+\$ go install
+\$ go build
+\$ ./dashlight
