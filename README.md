@@ -23,18 +23,20 @@ USE AT YOUR OWN RISK!
 ## TODO
 
 	TODO:
-		- [ ] Add slash status
-		- [ ] Update the balance calculation. It is currently
+		- [x] Add slash status
+		- [x] Update the balance calculation. It is currently
 			hard coded to format the box.
 		- [ ] Add a database back end to allow persistent
 			data storage.
-			- Once persistent storage is achieved the ability
+			- [ ] Once persistent storage is achieved the ability
 				to graph data can be added.
 		- [ ] Complete testing in order to move out of *Alpha!*
+		- [ ] Complete testing in order to move out of Alpha!
+		- [ ] Create a configuration file feature to save settings.
 
 ## Usage
 
-git clone https://github.com/NakamotoNetwork/Dashlight.git
+\$git clone https://github.com/NakamotoNetwork/Dashlight.git  
 
 \$ cd Dashlight  
 \$ go install  
