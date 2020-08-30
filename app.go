@@ -9,45 +9,22 @@
 		resources.
 
 	TODO:
-		1 Add slash status
+		1 Add slash status [DONE]
 		2 Update the balance calculation. It is currently
-			hard coded to format the box.
+			hard coded to format the box. [DONE]
 		3 Add a database back end to allow persistent
 			data storage.
 			- Once persistent storage is achieved the ability
 				to graph data can be added.
 		4 Complete testing in order to move out of Alpha!
-
-*/
-
-/*
-String to check balance and slash status
-curl -X POST -H "Content-Type: application/json" -d '{"pubkeys": ["0x90f70a6bbf31d38bb4e95a53ba87fc062b8858dcc45ec7c77174e891679f4e4edc2e6efb6f38aa11c7c66249c62cacdd"]}' http://localhost:5052/beacon/validators
-
-[
-  {
-    "pubkey": "0x90f70a6bbf31d38bb4e95a53ba87fc062b8858dcc45ec7c77174e891679f4e4edc2e6efb6f38aa11c7c66249c62cacdd",
-    "validator_index": 26595,
-    "balance": 31204700300,
-    "validator": {
-      "pubkey": "0x90f70a6bbf31d38bb4e95a53ba87fc062b8858dcc45ec7c77174e891679f4e4edc2e6efb6f38aa11c7c66249c62cacdd",
-      "withdrawal_credentials": "XXXXX",
-      "effective_balance": 31000000000,
-      "slashed": false,
-      "activation_eligibility_epoch": 631,
-      "activation_epoch": 1665,
-      "exit_epoch": 18446744073709552000,
-      "withdrawable_epoch": 18446744073709552000
-    }
-  }
-]
-
+		5 Create a configuration file feature to save settings.
 
 */
 
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -61,6 +38,22 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 )
 
+type BeaconValidator struct {
+	Balance   int64  `json:"balance"`
+	Pubkey    string `json:"pubkey"`
+	Validator struct {
+		ActivationEligibilityEpoch int64  `json:"activation_eligibility_epoch"`
+		ActivationEpoch            int64  `json:"activation_epoch"`
+		EffectiveBalance           int64  `json:"effective_balance"`
+		ExitEpoch                  int64  `json:"exit_epoch"`
+		Pubkey                     string `json:"pubkey"`
+		Slashed                    bool   `json:"slashed"`
+		WithdrawableEpoch          int64  `json:"withdrawable_epoch"`
+		WithdrawalCredentials      string `json:"withdrawal_credentials"`
+	} `json:"validator"`
+	ValidatorIndex int64 `json:"validator_index"`
+}
+
 type health struct {
 	MemoryTotal int     `json:"sys_virt_mem_total"`
 	MemoryUsed  int     `json:"sys_virt_mem_used"`
@@ -69,21 +62,23 @@ type health struct {
 	Version     string
 	PeerCount   string
 	DBSize      string
+	Balance     string
+	slashed     string
 }
-
 
 var metrics = health{}
 var memGauge = widgets.NewGauge()
 var menuTest = widgets.NewParagraph()
 var textInfo = widgets.NewList()
-var baseURL = "http://localhost:5052"
-var DBFile = "/var/lib/lighthouse/beacon-node/beacon/chain_db"
+var testval string
+
+const baseURL = "http://localhost:5052"
+const DBFile = "/var/lib/lighthouse/beacon-node/beacon/chain_db"
+
+var BeaconValidators []BeaconValidator
 
 func main() {
-
-	// Display the Help Message
-	getVersion()
-	menuTest.Title = metrics.Version
+	BeaconValidators = append([]BeaconValidator{})
 	menuTest.Text = "PRESS q TO QUIT"
 	menuTest.SetRect(0, 0, 50, 4)
 	menuTest.TextStyle.Fg = ui.ColorWhite
@@ -92,7 +87,9 @@ func main() {
 	// Text information
 
 	textInfo.Rows = []string{
-		"Node Balance: 31.214355995 ETH",
+		"Public Key  : XXX",
+		"Is Slashed  : Unknown",
+		"Node Balance: 00000 ETH",
 		"System Load : ",
 		"Peer Count  : ",
 		"DB Size     : ",
@@ -136,6 +133,7 @@ func showMemory() {
 	getHealth()
 	getPeers()
 	getDBSize()
+	getBalance()
 	if int(float64(metrics.MemoryUsed)/float64(metrics.MemoryTotal)*100) > 75 {
 		memGauge.BarColor = ui.ColorRed
 	} else {
@@ -144,14 +142,20 @@ func showMemory() {
 
 	memGauge.Percent = int(float64(metrics.MemoryUsed) / float64(metrics.MemoryTotal) * 100)
 
+	if BeaconValidators[0].Validator.Slashed {
+		textInfo.TextStyle = ui.NewStyle(ui.ColorRed)
+	} else {
+		textInfo.TextStyle = ui.NewStyle(ui.ColorYellow)
+	}
+
 	textInfo.Rows = []string{
-		"Node Balance: 31.214355995 ETH",
+		"Public Key  : " + BeaconValidators[0].Pubkey,
+		"Is Slashed  : " + strconv.FormatBool(BeaconValidators[0].Validator.Slashed),
+		"Node Balance: " + IntToString(BeaconValidators[0].Balance) + " ETH",
 		"System Load : " + FloatToString(metrics.SystemLoad),
 		"Peer Count  : " + metrics.PeerCount,
 		"DB Size     : " + metrics.DBSize,
 	}
-
-	// textInfo.Text = "System Load: " + FloatToString(metrics.SystemLoad) + "\n" + "Peer Count: " + metrics.PeerCount
 
 	ui.Render(menuTest)
 	ui.Render(textInfo)
@@ -209,6 +213,13 @@ func FloatToString(input_num float64) string {
 	return strconv.FormatFloat(input_num, 'f', -1, 32)
 }
 
+func IntToString(input_num int64) string {
+	// to convert a int number to a string and also gwei to ether
+	num := int(input_num / 1000000)
+	return FloatToString(float64(num) / 1000)
+	//return strconv.Itoa(input_num / 1000)
+}
+
 func getVersion() {
 	res, err := http.Get(baseURL + "/node/version")
 	if err != nil {
@@ -224,10 +235,10 @@ func getVersion() {
 
 func getDBSize() {
 
-	metrics.DBSize = strconv.FormatInt(DirSize(DBFile)/1024/1024/1024, 10) + " GB"
+	metrics.DBSize = strconv.FormatInt(getDirSize(DBFile)/1024/1024/1024, 10) + " GB"
 }
 
-func DirSize(path string) int64 {
+func getDirSize(path string) int64 {
 	var size int64
 	filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -239,4 +250,21 @@ func DirSize(path string) int64 {
 		return err
 	})
 	return size
+}
+
+func getBalance() {
+
+	jsonKeys := `{"pubkeys": ["0x90f70a6bbf31d38bb4e95a53ba87fc062b8858dcc45ec7c77174e891679f4e4edc2e6efb6f38aa11c7c66249c62cacdd"]}`
+
+	resp, err := http.Post(baseURL+"/beacon/validators", "application/json", bytes.NewBuffer([]byte(jsonKeys)))
+	if err != nil {
+		log.Fatalln(err)
+	} else {
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		json.Unmarshal(bodyBytes, &BeaconValidators)
+		testval = string(bodyBytes)
+
+	}
+
+	defer resp.Body.Close()
 }
