@@ -79,10 +79,13 @@ var BeaconValidators []BeaconValidator
 
 func main() {
 	BeaconValidators = append([]BeaconValidator{})
-	menuTest.Text = "PRESS q TO QUIT"
+	menuTest.Text = "  PRESS q TO QUIT"
 	menuTest.SetRect(0, 0, 50, 4)
 	menuTest.TextStyle.Fg = ui.ColorWhite
 	menuTest.BorderStyle.Fg = ui.ColorCyan
+	menuTest.Title = "\tDashLight Ethereum Validator Monitor"
+	getVersion()
+	menuTest.Text = menuTest.Text + "\nVer. = " + metrics.Version
 
 	// Text information
 
@@ -99,7 +102,7 @@ func main() {
 	textInfo.TextStyle = ui.NewStyle(ui.ColorYellow)
 
 	// Gauge to show percent memory usage
-	memGauge.Title = "Mem Usage"
+	memGauge.Title = "System Memory Usage"
 	memGauge.SetRect(0, len(textInfo.Rows)+9, 50, len(textInfo.Rows)+12)
 	memGauge.Percent = 0
 	memGauge.BarColor = ui.ColorGreen
