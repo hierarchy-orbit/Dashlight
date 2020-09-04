@@ -31,12 +31,15 @@ USE AT YOUR OWN RISK!
 			- [ ] Once persistent storage is achieved the ability
 				to graph data can be added.
 		- [ ] Complete testing in order to move out of *Alpha!*
-		- [ ] Complete testing in order to move out of Alpha!
-		- [ ] Create a configuration file feature to save settings.
+		- [X] Create a configuration file feature to save settings.
+				Cheated on this one by allowing commandline args. ;)
+				--url: http://localhost:5052
+				--DB: /var/lib/lighthouse/beacon-node/beacon/chain_db
+				--pubkey: NOKEY
 
 ## Usage
 
-\$git clone https://github.com/NakamotoNetwork/Dashlight.git  
+\$ git clone https://github.com/NakamotoNetwork/Dashlight.git  
 
 \$ cd Dashlight  
 \$ go install  

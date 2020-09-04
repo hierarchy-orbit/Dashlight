@@ -15,7 +15,8 @@
 		3 Add a database back end to allow persistent
 			data storage.
 			- Once persistent storage is achieved the ability
-				to graph data can be added.
+				to graph data can be added. Example
+				https://github.com/peterbourgon/diskv
 		4 Complete testing in order to move out of Alpha!
 		5 Create a configuration file feature to save settings.
 
@@ -33,6 +34,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+	"flag"
+	"fmt"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
@@ -71,21 +74,38 @@ var memGauge = widgets.NewGauge()
 var menuTest = widgets.NewParagraph()
 var textInfo = widgets.NewList()
 var testval string
+var windowWidth = 55
 
-const baseURL = "http://localhost:5052"
-const DBFile = "/var/lib/lighthouse/beacon-node/beacon/chain_db"
+// Command line config variables
+var baseURL		*string
+var DBFile		*string
+var Pubkey		*string
 
 var BeaconValidators []BeaconValidator
 
 func main() {
+
+	// Get the commandline flags
+	baseURL = flag.String("url", "http://localhost:5052", "Base URL and port (localhost:5052)")
+    DBFile = flag.String("dbfolder", "/var/lib/lighthouse/beacon-node/beacon/chain_db", "location of your chaindb folder (/var/lib/lighthouse/beacon-node/beacon/chain_db)")
+    Pubkey = flag.String("pubkey", "NOKEY", "Public Key of your validator.")
+    flag.Parse()
+
+
+	if *Pubkey == "NOKEY" {
+		fmt.Printf("\nUSAGE:\n--url: %s\n--DB: %s\n--pubkey: %s\n",*baseURL, *DBFile, *Pubkey)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Configuration: %s\n  %s\n  0x3757...384752\n",*baseURL, *DBFile)
 	BeaconValidators = append([]BeaconValidator{})
 	menuTest.Text = "  PRESS q TO QUIT"
-	menuTest.SetRect(0, 0, 50, 4)
+	menuTest.SetRect(0, 0, windowWidth, 6)
 	menuTest.TextStyle.Fg = ui.ColorWhite
 	menuTest.BorderStyle.Fg = ui.ColorCyan
 	menuTest.Title = "\tDashLight Ethereum Validator Monitor"
 	getVersion()
-	menuTest.Text = menuTest.Text + "\nVer. = " + metrics.Version
+	menuTest.Text = menuTest.Text + "\nVer.: " + metrics.Version + "\nDB: " + *DBFile
 
 	// Text information
 
@@ -98,12 +118,12 @@ func main() {
 		"DB Size     : ",
 	}
 
-	textInfo.SetRect(0, 5, 50, 5+len(textInfo.Rows)+2)
+	textInfo.SetRect(0, 6, windowWidth, 6+len(textInfo.Rows)+2)
 	textInfo.TextStyle = ui.NewStyle(ui.ColorYellow)
 
 	// Gauge to show percent memory usage
 	memGauge.Title = "System Memory Usage"
-	memGauge.SetRect(0, len(textInfo.Rows)+9, 50, len(textInfo.Rows)+12)
+	memGauge.SetRect(0, len(textInfo.Rows)+9, windowWidth, len(textInfo.Rows)+12)
 	memGauge.Percent = 0
 	memGauge.BarColor = ui.ColorGreen
 	memGauge.BorderStyle.Fg = ui.ColorWhite
@@ -170,7 +190,7 @@ func getHealth() {
 		Timeout: time.Second * 2, // Timeout after 2 seconds
 	}
 
-	req, err := http.NewRequest(http.MethodGet, baseURL+"/node/health", nil)
+	req, err := http.NewRequest(http.MethodGet, *baseURL+"/node/health", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -199,7 +219,7 @@ func getHealth() {
 }
 
 func getPeers() {
-	res, err := http.Get(baseURL + "/network/peer_count")
+	res, err := http.Get(*baseURL + "/network/peer_count")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -224,7 +244,7 @@ func IntToString(input_num int64) string {
 }
 
 func getVersion() {
-	res, err := http.Get(baseURL + "/node/version")
+	res, err := http.Get(*baseURL + "/node/version")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -238,28 +258,32 @@ func getVersion() {
 
 func getDBSize() {
 
-	metrics.DBSize = strconv.FormatInt(getDirSize(DBFile)/1024/1024/1024, 10) + " GB"
+	metrics.DBSize = strconv.FormatInt(getDirSize(*DBFile)/1024/1024/1024, 10) + " GB"
 }
 
 func getDirSize(path string) int64 {
 	var size int64
-	filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if !info.IsDir() {
 			size += info.Size()
 		}
 		return err
 	})
-	return size
+	if err == nil {
+		return size
+	} else {
+		return 0
+	}
 }
 
 func getBalance() {
 
-	jsonKeys := `{"pubkeys": ["0x90f70a6bbf31d38bb4e95a53ba87fc062b8858dcc45ec7c77174e891679f4e4edc2e6efb6f38aa11c7c66249c62cacdd"]}`
+	jsonKeys := `{"pubkeys": ["` + *Pubkey + `"]}`
 
-	resp, err := http.Post(baseURL+"/beacon/validators", "application/json", bytes.NewBuffer([]byte(jsonKeys)))
+	resp, err := http.Post(*baseURL+"/beacon/validators", "application/json", bytes.NewBuffer([]byte(jsonKeys)))
 	if err != nil {
 		log.Fatalln(err)
 	} else {
