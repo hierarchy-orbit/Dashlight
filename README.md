@@ -44,4 +44,4 @@ USE AT YOUR OWN RISK!
 \$ cd Dashlight  
 \$ go install  
 \$ go build  
-\$ ./dashlight  
+\$ ./dashlight --url: http://localhost:5052 --DB: /var/lib/lighthouse/beacon-node/beacon/chain_db --pubkey <YOUR_PUBLIC_KEY> 
